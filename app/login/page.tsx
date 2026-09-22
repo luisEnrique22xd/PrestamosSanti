@@ -38,7 +38,7 @@ if (userRole === 'admin') {
     <div className="min-h-screen bg-[#050533] flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-md p-10 rounded-[2.5rem] shadow-2xl">
         <h2 className="text-3xl font-black text-slate-800 mb-2 italic tracking-tighter">Bienvenido</h2>
-        <p className="text-slate-400 text-sm mb-8">Inicia sesión en Préstamos Express</p>
+        <p className="text-slate-400 text-sm mb-8">Inicia sesión en Préstamos Santi</p>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <input 
