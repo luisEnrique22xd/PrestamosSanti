@@ -1,4 +1,329 @@
-"use client";
+// "use client";
+// import { useState, useEffect, useMemo } from 'react';
+// import {
+//   Search, DollarSign, X, CheckCircle2,
+//   Loader2, ArrowUpRight, Users, User, AlertCircle
+// } from "lucide-react";
+// import api from '@/lib/api';
+// import { generarPDFRecibo } from '@/lib/generateTicket';
+
+// export default function PagosPage() {
+//   const [alerta, setAlerta] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
+
+//   const lanzarAlerta = (type: 'success' | 'error', msg: string) => {
+//     setAlerta({ type, msg });
+//     setTimeout(() => setAlerta(null), 5000);
+//   };
+
+//   const [montoPenalizacion, setMontoPenalizacion] = useState(0);
+//   const [tienePenalizaciones, setTienePenalizaciones] = useState(false);
+//   const [busqueda, setBusqueda] = useState('');
+//   const [sugerencias, setSugerencias] = useState<any[]>([]);
+//   const [clienteSel, setClienteSel] = useState<any>(null);
+//   const [montoAbono, setMontoAbono] = useState<string>('');
+//   const [loading, setLoading] = useState(false);
+//   const [semanaSeleccionada, setSemanaSeleccionada] = useState<string>('');
+//   const [modalidadPago, setModalidadPago] = useState('E');
+
+//   // 1. LÓGICA DE PENALIZACIONES
+//   useEffect(() => {
+//     if (clienteSel) {
+//       const penalizacionesActivas = clienteSel.penalizaciones?.filter((p: any) => p.activa) || [];
+//       if (penalizacionesActivas.length > 0 || Number(clienteSel.total_penalizaciones) > 0) {
+//         setTienePenalizaciones(true);
+//         setMontoPenalizacion(Number(clienteSel.total_penalizaciones) || 0);
+//       } else {
+//         setTienePenalizaciones(false);
+//         setMontoPenalizacion(0);
+//       }
+//     } else {
+//       setTienePenalizaciones(false);
+//       setMontoPenalizacion(0);
+//     }
+//   }, [clienteSel]);
+
+//   // 2. CUOTA SUGERIDA (CORREGIDA: Acceso a prestamos_activos[0])
+//   useEffect(() => {
+//     if (clienteSel && semanaSeleccionada) {
+//       const prestamo = clienteSel.prestamos_activos?.[0];
+//       if (prestamo) {
+//         const montoTotal = Number(prestamo.monto_total) || 0;
+//         const numCuotas = Number(prestamo.cuotas) || 12;
+//         const sugerencia = montoTotal / numCuotas;
+//         setMontoAbono(sugerencia.toFixed(2));
+//       }
+//     }
+//   }, [semanaSeleccionada, clienteSel]);
+
+//   // 3. BUSCADOR
+//   const buscarEntidades = async (val: string) => {
+//     setBusqueda(val);
+//     if (val.length > 1) {
+//       try {
+//         const res = await api.get(`/clientes/directorio-hibrido/?search=${val}`);
+//         const conDeuda = res.data.filter((e: any) => e.tiene_prestamo_activo);
+//         setSugerencias(conDeuda.slice(0, 5));
+//       } catch (e) { console.error("Error buscando entidades:", e); }
+//     } else { setSugerencias([]); }
+//   };
+
+//   const seleccionarEntidadConFolio = (cliente: any, prestamo: any) => {
+//     const entidadConfigurada = {
+//       ...cliente,
+//       // Forzamos el saldo del préstamo seleccionado
+//       saldo_actual: prestamo.saldo_restante !== undefined ? prestamo.saldo_restante : (prestamo.saldo_real || prestamo.monto_total),
+//       prestamos_activos: [prestamo],
+//       ultimo_prestamo_id: prestamo.id
+//     };
+//     setClienteSel(entidadConfigurada);
+//     setSugerencias([]);
+//     setBusqueda(cliente.nombre);
+//     setSemanaSeleccionada('');
+//     setMontoAbono('');
+//   };
+
+//   // 4. CÁLCULOS DE PANTALLA
+//   const saldoTotalAnterior = useMemo(() => {
+//     const principal = Number(clienteSel?.saldo_actual) || 0;
+//     const moras = Number(clienteSel?.total_penalizaciones) || 0;
+//     return principal + moras;
+//   }, [clienteSel]);
+
+//   const nuevoSaldoCalculado = useMemo(() => {
+//     const capitalActual = Number(clienteSel?.saldo_actual) || 0;
+//     const abonoCuotaRecibido = montoAbono === '' ? 0 : Number(montoAbono);
+//     const resultado = capitalActual - abonoCuotaRecibido;
+//     return Math.max(0, resultado);
+//   }, [clienteSel, montoAbono]);
+
+//   const handleAplicarPago = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!clienteSel || !montoAbono) return;
+
+//     setLoading(true);
+//     try {
+//       const res = await api.post('/abonos/', {
+//         prestamo: clienteSel.ultimo_prestamo_id,
+//         monto: Number(montoAbono),
+//         semana_numero: Number(semanaSeleccionada),
+//         monto_penalizacion: Number(montoPenalizacion),
+//         modalidad: modalidadPago,
+//       });
+
+//       generarPDFRecibo({
+//         folio: res.data.id.toString().padStart(8, '0'),
+//         cliente: res.data.cliente,
+//         monto: res.data.monto,
+//         semana: semanaSeleccionada,
+//         saldoAnterior: res.data.saldo_anterior,
+//         nuevoSaldo: res.data.nuevo_saldo,
+//         penalizacion: res.data.penalizaciones_pagadas,
+//         fecha: res.data.fecha,
+//         hora: res.data.hora
+//       });
+
+//       lanzarAlerta('success', "✅ Pago aplicado con éxito");
+//       setClienteSel(null);
+//       setBusqueda('');
+//       setMontoAbono('');
+//       setMontoPenalizacion(0);
+//     } catch (error) {
+//       lanzarAlerta('error', "❌ Error al procesar el pago");
+//     } finally { setLoading(false); }
+//   };
+
+//   return (
+//     <div className="max-w-2xl mx-auto py-4 md:py-10 animate-in fade-in duration-500">
+//       <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[3rem] shadow-sm border border-slate-100 relative overflow-hidden">
+//         <div className={`absolute -top-10 -right-10 opacity-5 transition-colors ${clienteSel?.es_grupo ? 'text-purple-600' : 'text-[#0047AB]'}`}>
+//           {clienteSel?.es_grupo ? <Users size={240} /> : <DollarSign size={240} />}
+//         </div>
+
+//         <div className="relative z-10">
+//           <h2 className="text-2xl md:text-3xl font-black text-slate-800 mb-2 italic tracking-tighter">Caja de Cobranza</h2>
+//           <p className="text-slate-400 text-sm mb-10 font-medium italic">Gestión de Abonos y Recuperación de Capital</p>
+
+//           <form onSubmit={handleAplicarPago} className="space-y-8">
+//             {/* BUSCADOR */}
+//             <div className="space-y-3 relative">
+//               <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-[0.2em]">Localizar Deudor</label>
+//               <div className="relative group">
+//                 <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${clienteSel ? 'text-emerald-500' : 'text-slate-300'}`} size={20} />
+//                 <input
+//                   value={busqueda}
+//                   onChange={(e) => buscarEntidades(e.target.value)}
+//                   className="w-full pl-14 pr-6 py-5 bg-slate-50 rounded-[2rem] outline-none border-2 border-transparent focus:border-[#0047AB] focus:bg-white font-bold text-slate-700"
+//                   placeholder="Escribe nombre o ID..."
+//                 />
+//               </div>
+
+//               {sugerencias.length > 0 && (
+//                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl z-[100] border border-slate-100 overflow-hidden">
+//                   {sugerencias.flatMap((c) =>
+//                     c.prestamos_activos?.map((p: any) => (
+//                       <button
+//                         key={`${c.id}-${p.id}`}
+//                         type="button"
+//                         onClick={() => seleccionarEntidadConFolio(c, p)}
+//                         className="w-full p-4 flex justify-between items-center hover:bg-blue-50 border-b last:border-none group transition-colors"
+//                       >
+//                         <div className="flex items-center gap-4">
+//                           <div className={`p-3 rounded-xl ${c.es_grupo ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+//                             {c.es_grupo ? <Users size={20} /> : <User size={20} />}
+//                           </div>
+//                           <div className="text-left">
+//                             <p className="font-black text-slate-800 text-xs uppercase tracking-tight">{c.nombre}</p>
+//                             <div className="flex gap-2 mt-1">
+//                               <span className="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-black uppercase">Folio: #{p.folio}</span>
+//                               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+//                                 Saldo: ${Number(p.saldo_restante || p.saldo_real || p.monto_total).toLocaleString('es-MX')}
+//                               </span>
+//                             </div>
+//                           </div>
+//                         </div>
+//                         <ArrowUpRight size={16} className="text-slate-300 group-hover:text-blue-600 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+//                       </button>
+//                     ))
+//                   )}
+//                 </div>
+//               )}
+//             </div>
+
+//             {/* SELECTOR DE SEMANA */}
+//             <div className="space-y-3">
+//               <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Número de Cuota a Liquidar</label>
+//               <select required value={semanaSeleccionada} onChange={(e) => setSemanaSeleccionada(e.target.value)} className="w-full p-5 bg-slate-50 rounded-[1.5rem] outline-none border-2 border-transparent focus:border-[#0047AB] font-bold text-slate-700 cursor-pointer">
+//                 <option value="">Selecciona el periodo de pago...</option>
+//                 {[...Array(clienteSel?.prestamos_activos?.[0]?.cuotas || 12)].map((_, i) => (
+//                   <option key={i + 1} value={i + 1}>Abono #{i + 1}</option>
+//                 ))}
+//               </select>
+//             </div>
+
+//             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+//               <div className="space-y-3">
+//                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Monto Recibido ($)</label>
+//                 <div className="relative">
+//                   <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-emerald-500 text-xl">$</span>
+//                   <input
+//                     type="number"
+//                     min={0}
+//                     required
+//                     value={montoAbono}
+//                     onChange={(e) => setMontoAbono(e.target.value)}
+//                     className="w-full pl-12 pr-6 py-5 bg-slate-50 rounded-[1.5rem] outline-none border-2 border-transparent focus:border-emerald-500 font-black text-2xl md:text-3xl text-[#050533]"
+//                     placeholder="0.00"
+//                   />
+//                 </div>
+
+//                 {clienteSel && (
+//                   <div className="flex justify-between px-2 text-[10px] text-[#0047AB] font-black uppercase italic animate-in fade-in duration-300">
+//                     <span>Abono a capital:</span>
+//                     <span>
+//                       {clienteSel.prestamos_activos?.[0]
+//                         ? `$${(Number(clienteSel.prestamos_activos[0].monto_total) / Number(clienteSel.prestamos_activos[0].cuotas)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+//                         : '---'}
+//                     </span>
+//                   </div>
+//                 )}
+//               </div>
+
+//               <div className="space-y-3">
+//                 <label className={`text-[10px] font-black uppercase ml-2 tracking-widest ${tienePenalizaciones ? 'text-red-500' : 'text-slate-400'}`}>
+//                   {tienePenalizaciones ? '⚠️ Cobro Penalización' : 'Penalizaciones'}
+//                 </label>
+//                 <div className="relative">
+//                   <span className={`absolute left-5 top-1/2 -translate-y-1/2 font-black text-xl ${tienePenalizaciones ? 'text-red-500' : 'text-slate-300'}`}>$</span>
+//                   <input
+//                     type="number"
+//                     min={0}
+//                     value={montoPenalizacion}
+//                     onChange={(e) => setMontoPenalizacion(Number(e.target.value))}
+//                     disabled={!tienePenalizaciones}
+//                     className={`w-full pl-12 pr-6 py-5 rounded-[1.5rem] outline-none border-2 font-black text-xl md:text-2xl transition-all ${tienePenalizaciones
+//                       ? 'bg-red-50 border-red-200 text-red-600 focus:border-red-500'
+//                       : 'bg-slate-100 border-transparent text-slate-400 cursor-not-allowed'
+//                     }`}
+//                   />
+//                 </div>
+//               </div>
+//             </div>
+
+//             <div className="space-y-3">
+//               <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Modalidad de Pago</label>
+//               <div className="grid grid-cols-3 gap-2">
+//                 {[{ id: 'E', label: 'Efectivo' }, { id: 'D', label: 'Depósito' }, { id: 'T', label: 'Transferencia' }].map((m) => (
+//                   <button key={m.id} type="button" onClick={() => setModalidadPago(m.id)} className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${modalidadPago === m.id ? `border-slate-800 bg-slate-800 text-white shadow-md` : `border-slate-100 bg-slate-50 text-slate-400`}`}>
+//                     {m.label}
+//                   </button>
+//                 ))}
+//               </div>
+//             </div>
+
+//             {/* RESUMEN ACTUALIZADO */}
+//             {clienteSel && (
+//               <div className={`p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] border animate-in slide-in-from-bottom-2 duration-500 ${clienteSel.es_grupo ? 'bg-purple-50 border-purple-100' : 'bg-emerald-50 border-emerald-100'}`}>
+//                 <div className="space-y-3">
+//                   <div className="flex justify-between text-slate-500 font-bold text-xs">
+//                     <span>SALDO TOTAL (CON MORA):</span>
+//                     <span className="text-slate-700 font-black">${saldoTotalAnterior.toLocaleString('es-MX')}</span>
+//                   </div>
+
+//                   <div className="space-y-1 px-1">
+//                     <div className="flex justify-between text-[10px] text-blue-600 font-black uppercase italic mb-1">
+//                       <span>Abono a capital:</span>
+//                       <span>
+//                         {clienteSel.prestamos_activos?.[0]
+//                           ? `$${(Number(clienteSel.prestamos_activos[0].monto_total) / Number(clienteSel.prestamos_activos[0].cuotas)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+//                           : '---'}
+//                       </span>
+//                     </div>
+//                     <div className="flex justify-between text-slate-400 text-[10px] italic font-medium">
+//                       <span>Capital actual: ${Number(clienteSel.saldo_actual).toLocaleString()}</span>
+//                       <span>+ Mora detectada: ${Number(montoPenalizacion).toLocaleString()}</span>
+//                     </div>
+//                     <div className="flex justify-between text-rose-500 text-[10px] font-black uppercase tracking-tighter pt-1">
+//                       <span>Abono a aplicar:</span>
+//                       <span>- ${(Number(montoAbono) + Number(montoPenalizacion)).toLocaleString('es-MX')}</span>
+//                     </div>
+//                   </div>
+
+//                   <div className={`flex justify-between pt-4 border-t ${clienteSel.es_grupo ? 'border-purple-200' : 'border-emerald-200'}`}>
+//                     <span className="text-xs font-black uppercase">NUEVO SALDO CAPITAL:</span>
+//                     <span className={`text-xl md:text-2xl font-black tracking-tighter ${clienteSel.es_grupo ? 'text-purple-900' : 'text-emerald-900'}`}>
+//                       ${nuevoSaldoCalculado.toLocaleString('es-MX')}
+//                     </span>
+//                   </div>
+//                 </div>
+//               </div>
+//             )}
+
+//             <button type="submit" disabled={loading || !clienteSel || !montoAbono} className={`w-full py-5 md:py-6 text-white font-black rounded-2xl md:rounded-[2rem] shadow-xl transition-all uppercase text-[10px] md:text-xs tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 disabled:opacity-30 ${clienteSel?.es_grupo ? 'bg-purple-600 hover:bg-purple-700' : 'bg-[#050533] hover:bg-[#0047AB]'}`}>
+//               {loading ? <Loader2 className="animate-spin" /> : <>Confirmar y Emitir Recibo <CheckCircle2 size={18} /></>}
+//             </button>
+//           </form>
+//         </div>
+//       </div>
+
+//       {alerta && (
+//         <div className={`fixed top-10 right-10 z-[130] p-6 rounded-[2rem] shadow-2xl flex items-center gap-4 border-b-4 bg-white animate-in slide-in-from-right duration-500 ${alerta.type === 'success' ? 'border-emerald-500' : 'border-red-500'}`}>
+//           <div className={`p-3 rounded-2xl ${alerta.type === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
+//             {alerta.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
+//           </div>
+//           <div>
+//             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">{alerta.type === 'success' ? 'Sistema Express' : 'Atención'}</p>
+//             <p className="font-bold text-sm italic text-slate-700">{alerta.msg}</p>
+//           </div>
+//           <button onClick={() => setAlerta(null)} className="ml-4 text-slate-300 hover:text-slate-500">
+//             <X size={18} />
+//           </button>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+'use client';
+
 import { useState, useEffect, useMemo } from 'react';
 import {
   Search, DollarSign, X, CheckCircle2,
@@ -6,6 +331,32 @@ import {
 } from "lucide-react";
 import api from '@/lib/api';
 import { generarPDFRecibo } from '@/lib/generateTicket';
+
+interface Penalizacion {
+  id: number;
+  activa: boolean;
+  monto: number;
+}
+
+interface Prestamo {
+  id: number;
+  folio: string;
+  monto_total: number | string;
+  cuotas: number;
+  saldo_restante?: number;
+  saldo_real?: number;
+}
+
+interface Cliente {
+  id: number;
+  nombre: string;
+  es_grupo?: boolean;
+  saldo_actual?: number;
+  total_penalizaciones?: number;
+  penalizaciones?: Penalizacion[];
+  prestamos_activos?: Prestamo[];
+  ultimo_prestamo_id?: number;
+}
 
 export default function PagosPage() {
   const [alerta, setAlerta] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
@@ -15,11 +366,11 @@ export default function PagosPage() {
     setTimeout(() => setAlerta(null), 5000);
   };
 
-  const [montoPenalizacion, setMontoPenalizacion] = useState(0);
+  const [montoPenalizacion, setMontoPenalizacion] = useState<string>('0');
   const [tienePenalizaciones, setTienePenalizaciones] = useState(false);
   const [busqueda, setBusqueda] = useState('');
-  const [sugerencias, setSugerencias] = useState<any[]>([]);
-  const [clienteSel, setClienteSel] = useState<any>(null);
+  const [sugerencias, setSugerencias] = useState<Cliente[]>([]);
+  const [clienteSel, setClienteSel] = useState<Cliente | null>(null);
   const [montoAbono, setMontoAbono] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [semanaSeleccionada, setSemanaSeleccionada] = useState<string>('');
@@ -28,53 +379,63 @@ export default function PagosPage() {
   // 1. LÓGICA DE PENALIZACIONES
   useEffect(() => {
     if (clienteSel) {
-      const penalizacionesActivas = clienteSel.penalizaciones?.filter((p: any) => p.activa) || [];
-      if (penalizacionesActivas.length > 0 || Number(clienteSel.total_penalizaciones) > 0) {
+      const penalizacionesActivas = clienteSel.penalizaciones?.filter((p) => p.activa) || [];
+      const totalPenalizaciones = Number(clienteSel.total_penalizaciones) || 0;
+      
+      if (penalizacionesActivas.length > 0 || totalPenalizaciones > 0) {
         setTienePenalizaciones(true);
-        setMontoPenalizacion(Number(clienteSel.total_penalizaciones) || 0);
+        setMontoPenalizacion(totalPenalizaciones.toString());
       } else {
         setTienePenalizaciones(false);
-        setMontoPenalizacion(0);
+        setMontoPenalizacion('0');
       }
     } else {
       setTienePenalizaciones(false);
-      setMontoPenalizacion(0);
+      setMontoPenalizacion('0');
     }
   }, [clienteSel]);
 
-  // 2. CUOTA SUGERIDA (CORREGIDA: Acceso a prestamos_activos[0])
+  // 2. CUOTA SUGERIDA
   useEffect(() => {
     if (clienteSel && semanaSeleccionada) {
       const prestamo = clienteSel.prestamos_activos?.[0];
       if (prestamo) {
         const montoTotal = Number(prestamo.monto_total) || 0;
         const numCuotas = Number(prestamo.cuotas) || 12;
-        const sugerencia = montoTotal / numCuotas;
+        const sugerencia = numCuotas > 0 ? montoTotal / numCuotas : 0;
         setMontoAbono(sugerencia.toFixed(2));
       }
     }
   }, [semanaSeleccionada, clienteSel]);
 
-  // 3. BUSCADOR
+  // 3. BUSCADOR DE ENTIDADES
   const buscarEntidades = async (val: string) => {
     setBusqueda(val);
-    if (val.length > 1) {
+    if (val.trim().length > 1) {
       try {
-        const res = await api.get(`/clientes/directorio-hibrido/?search=${val}`);
+        const res = await api.get(`/clientes/directorio-hibrido/?search=${encodeURIComponent(val)}`);
         const conDeuda = res.data.filter((e: any) => e.tiene_prestamo_activo);
         setSugerencias(conDeuda.slice(0, 5));
-      } catch (e) { console.error("Error buscando entidades:", e); }
-    } else { setSugerencias([]); }
+      } catch (e) {
+        console.error("Error buscando entidades:", e);
+      }
+    } else {
+      setSugerencias([]);
+    }
   };
 
-  const seleccionarEntidadConFolio = (cliente: any, prestamo: any) => {
-    const entidadConfigurada = {
+  const seleccionarEntidadConFolio = (cliente: Cliente, prestamo: Prestamo) => {
+    const saldo = prestamo.saldo_restante !== undefined 
+      ? prestamo.saldo_restante 
+      : (prestamo.saldo_real || Number(prestamo.monto_total) || 0);
+
+    const entidadConfigurada: Cliente = {
       ...cliente,
-      // Forzamos el saldo del préstamo seleccionado
-      saldo_actual: prestamo.saldo_restante !== undefined ? prestamo.saldo_restante : (prestamo.saldo_real || prestamo.monto_total),
+      saldo_actual: saldo,
       prestamos_activos: [prestamo],
       ultimo_prestamo_id: prestamo.id
     };
+
     setClienteSel(entidadConfigurada);
     setSugerencias([]);
     setBusqueda(cliente.nombre);
@@ -82,7 +443,15 @@ export default function PagosPage() {
     setMontoAbono('');
   };
 
-  // 4. CÁLCULOS DE PANTALLA
+  // 4. CÁLCULOS
+  const abonoCuotaSugerido = useMemo(() => {
+    const prestamo = clienteSel?.prestamos_activos?.[0];
+    if (!prestamo) return 0;
+    const montoTotal = Number(prestamo.monto_total) || 0;
+    const cuotas = Number(prestamo.cuotas) || 1;
+    return cuotas > 0 ? montoTotal / cuotas : 0;
+  }, [clienteSel]);
+
   const saldoTotalAnterior = useMemo(() => {
     const principal = Number(clienteSel?.saldo_actual) || 0;
     const moras = Number(clienteSel?.total_penalizaciones) || 0;
@@ -92,8 +461,7 @@ export default function PagosPage() {
   const nuevoSaldoCalculado = useMemo(() => {
     const capitalActual = Number(clienteSel?.saldo_actual) || 0;
     const abonoCuotaRecibido = montoAbono === '' ? 0 : Number(montoAbono);
-    const resultado = capitalActual - abonoCuotaRecibido;
-    return Math.max(0, resultado);
+    return Math.max(0, capitalActual - abonoCuotaRecibido);
   }, [clienteSel, montoAbono]);
 
   const handleAplicarPago = async (e: React.FormEvent) => {
@@ -106,7 +474,7 @@ export default function PagosPage() {
         prestamo: clienteSel.ultimo_prestamo_id,
         monto: Number(montoAbono),
         semana_numero: Number(semanaSeleccionada),
-        monto_penalizacion: Number(montoPenalizacion),
+        monto_penalizacion: Number(montoPenalizacion) || 0,
         modalidad: modalidadPago,
       });
 
@@ -126,33 +494,43 @@ export default function PagosPage() {
       setClienteSel(null);
       setBusqueda('');
       setMontoAbono('');
-      setMontoPenalizacion(0);
+      setMontoPenalizacion('0');
+      setSemanaSeleccionada('');
     } catch (error) {
       lanzarAlerta('error', "❌ Error al procesar el pago");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="max-w-2xl mx-auto py-4 md:py-10 animate-in fade-in duration-500">
-      <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[3rem] shadow-sm border border-slate-100 relative overflow-hidden">
-        <div className={`absolute -top-10 -right-10 opacity-5 transition-colors ${clienteSel?.es_grupo ? 'text-purple-600' : 'text-[#0047AB]'}`}>
+      <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[3rem] shadow-sm border border-slate-200/80 relative overflow-hidden">
+        <div className={`absolute -top-10 -right-10 opacity-5 transition-colors ${clienteSel?.es_grupo ? 'text-slate-800' : 'text-emerald-700'}`}>
           {clienteSel?.es_grupo ? <Users size={240} /> : <DollarSign size={240} />}
         </div>
 
         <div className="relative z-10">
-          <h2 className="text-2xl md:text-3xl font-black text-slate-800 mb-2 italic tracking-tighter">Caja de Cobranza</h2>
-          <p className="text-slate-400 text-sm mb-10 font-medium italic">Gestión de Abonos y Recuperación de Capital</p>
+          <p className="text-emerald-700 text-[10px] font-black uppercase tracking-widest mb-1 italic">
+            Sistema SIFIN · Módulo de Transacciones
+          </p>
+          <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-2 italic tracking-tighter uppercase">
+            Caja de Cobranza
+          </h2>
+          <p className="text-slate-400 text-xs mb-10 font-bold uppercase tracking-wider italic">
+            Gestión de Abonos y Recuperación de Capital
+          </p>
 
           <form onSubmit={handleAplicarPago} className="space-y-8">
             {/* BUSCADOR */}
             <div className="space-y-3 relative">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-[0.2em]">Localizar Deudor</label>
               <div className="relative group">
-                <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${clienteSel ? 'text-emerald-500' : 'text-slate-300'}`} size={20} />
+                <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${clienteSel ? 'text-emerald-600' : 'text-slate-300'}`} size={20} />
                 <input
                   value={busqueda}
                   onChange={(e) => buscarEntidades(e.target.value)}
-                  className="w-full pl-14 pr-6 py-5 bg-slate-50 rounded-[2rem] outline-none border-2 border-transparent focus:border-[#0047AB] focus:bg-white font-bold text-slate-700"
+                  className="w-full pl-14 pr-6 py-5 bg-slate-50 rounded-[2rem] outline-none border-2 border-transparent focus:border-emerald-600 focus:bg-white font-bold text-slate-800 transition-all shadow-sm"
                   placeholder="Escribe nombre o ID..."
                 />
               </div>
@@ -160,28 +538,30 @@ export default function PagosPage() {
               {sugerencias.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl z-[100] border border-slate-100 overflow-hidden">
                   {sugerencias.flatMap((c) =>
-                    c.prestamos_activos?.map((p: any) => (
+                    c.prestamos_activos?.map((p) => (
                       <button
                         key={`${c.id}-${p.id}`}
                         type="button"
                         onClick={() => seleccionarEntidadConFolio(c, p)}
-                        className="w-full p-4 flex justify-between items-center hover:bg-blue-50 border-b last:border-none group transition-colors"
+                        className="w-full p-4 flex justify-between items-center hover:bg-slate-50 border-b last:border-none group transition-colors"
                       >
                         <div className="flex items-center gap-4">
-                          <div className={`p-3 rounded-xl ${c.es_grupo ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                          <div className={`p-3 rounded-xl ${c.es_grupo ? 'bg-slate-100 text-slate-800' : 'bg-emerald-50 text-emerald-700'}`}>
                             {c.es_grupo ? <Users size={20} /> : <User size={20} />}
                           </div>
                           <div className="text-left">
                             <p className="font-black text-slate-800 text-xs uppercase tracking-tight">{c.nombre}</p>
                             <div className="flex gap-2 mt-1">
-                              <span className="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-black uppercase">Folio: #{p.folio}</span>
+                              <span className={`text-[9px] text-white px-2 py-0.5 rounded-full font-black uppercase ${c.es_grupo ? 'bg-slate-800' : 'bg-emerald-700'}`}>
+                                Folio: #{p.folio}
+                              </span>
                               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
-                                Saldo: ${Number(p.saldo_restante || p.saldo_real || p.monto_total).toLocaleString('es-MX')}
+                                Saldo: ${Number(p.saldo_restante ?? p.saldo_real ?? p.monto_total).toLocaleString('es-MX')}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <ArrowUpRight size={16} className="text-slate-300 group-hover:text-blue-600 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                        <ArrowUpRight size={16} className="text-slate-300 group-hover:text-emerald-600 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                       </button>
                     ))
                   )}
@@ -192,7 +572,12 @@ export default function PagosPage() {
             {/* SELECTOR DE SEMANA */}
             <div className="space-y-3">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Número de Cuota a Liquidar</label>
-              <select required value={semanaSeleccionada} onChange={(e) => setSemanaSeleccionada(e.target.value)} className="w-full p-5 bg-slate-50 rounded-[1.5rem] outline-none border-2 border-transparent focus:border-[#0047AB] font-bold text-slate-700 cursor-pointer">
+              <select 
+                required 
+                value={semanaSeleccionada} 
+                onChange={(e) => setSemanaSeleccionada(e.target.value)} 
+                className="w-full p-5 bg-slate-50 rounded-[1.5rem] outline-none border-2 border-transparent focus:border-emerald-600 font-bold text-slate-800 cursor-pointer transition-all"
+              >
                 <option value="">Selecciona el periodo de pago...</option>
                 {[...Array(clienteSel?.prestamos_activos?.[0]?.cuotas || 12)].map((_, i) => (
                   <option key={i + 1} value={i + 1}>Abono #{i + 1}</option>
@@ -201,47 +586,49 @@ export default function PagosPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+              {/* MONTO RECIBIDO */}
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Monto Recibido ($)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Monto Recibido ($ MXN)</label>
                 <div className="relative">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-emerald-500 text-xl">$</span>
+                  <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-emerald-600 text-xl">$</span>
                   <input
                     type="number"
                     min={0}
+                    step="0.01"
                     required
                     value={montoAbono}
                     onChange={(e) => setMontoAbono(e.target.value)}
-                    className="w-full pl-12 pr-6 py-5 bg-slate-50 rounded-[1.5rem] outline-none border-2 border-transparent focus:border-emerald-500 font-black text-2xl md:text-3xl text-[#050533]"
+                    className="w-full pl-12 pr-6 py-5 bg-slate-50 rounded-[1.5rem] outline-none border-2 border-transparent focus:border-emerald-600 font-black text-2xl md:text-3xl text-slate-900 transition-all"
                     placeholder="0.00"
                   />
                 </div>
 
                 {clienteSel && (
-                  <div className="flex justify-between px-2 text-[10px] text-[#0047AB] font-black uppercase italic animate-in fade-in duration-300">
-                    <span>Abono a capital:</span>
+                  <div className="flex justify-between px-2 text-[10px] text-emerald-700 font-black uppercase italic animate-in fade-in duration-300">
+                    <span>Cuota sugerida:</span>
                     <span>
-                      {clienteSel.prestamos_activos?.[0]
-                        ? `$${(Number(clienteSel.prestamos_activos[0].monto_total) / Number(clienteSel.prestamos_activos[0].cuotas)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
-                        : '---'}
+                      ${abonoCuotaSugerido.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 )}
               </div>
 
+              {/* PENALIZACIONES */}
               <div className="space-y-3">
-                <label className={`text-[10px] font-black uppercase ml-2 tracking-widest ${tienePenalizaciones ? 'text-red-500' : 'text-slate-400'}`}>
+                <label className={`text-[10px] font-black uppercase ml-2 tracking-widest ${tienePenalizaciones ? 'text-rose-600' : 'text-slate-400'}`}>
                   {tienePenalizaciones ? '⚠️ Cobro Penalización' : 'Penalizaciones'}
                 </label>
                 <div className="relative">
-                  <span className={`absolute left-5 top-1/2 -translate-y-1/2 font-black text-xl ${tienePenalizaciones ? 'text-red-500' : 'text-slate-300'}`}>$</span>
+                  <span className={`absolute left-5 top-1/2 -translate-y-1/2 font-black text-xl ${tienePenalizaciones ? 'text-rose-600' : 'text-slate-300'}`}>$</span>
                   <input
                     type="number"
                     min={0}
+                    step="0.01"
                     value={montoPenalizacion}
-                    onChange={(e) => setMontoPenalizacion(Number(e.target.value))}
+                    onChange={(e) => setMontoPenalizacion(e.target.value)}
                     disabled={!tienePenalizaciones}
                     className={`w-full pl-12 pr-6 py-5 rounded-[1.5rem] outline-none border-2 font-black text-xl md:text-2xl transition-all ${tienePenalizaciones
-                      ? 'bg-red-50 border-red-200 text-red-600 focus:border-red-500'
+                      ? 'bg-rose-50 border-rose-200 text-rose-600 focus:border-rose-500'
                       : 'bg-slate-100 border-transparent text-slate-400 cursor-not-allowed'
                     }`}
                   />
@@ -249,11 +636,21 @@ export default function PagosPage() {
               </div>
             </div>
 
+            {/* MODALIDAD DE PAGO */}
             <div className="space-y-3">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Modalidad de Pago</label>
               <div className="grid grid-cols-3 gap-2">
-                {[{ id: 'E', label: 'Efectivo' }, { id: 'D', label: 'Depósito' }, { id: 'T', label: 'Transferencia' }].map((m) => (
-                  <button key={m.id} type="button" onClick={() => setModalidadPago(m.id)} className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${modalidadPago === m.id ? `border-slate-800 bg-slate-800 text-white shadow-md` : `border-slate-100 bg-slate-50 text-slate-400`}`}>
+                {[
+                  { id: 'E', label: 'Efectivo' },
+                  { id: 'D', label: 'Depósito' },
+                  { id: 'T', label: 'Transferencia' }
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setModalidadPago(m.id)}
+                    className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${modalidadPago === m.id ? 'border-slate-800 bg-slate-900 text-white shadow-md' : 'border-slate-100 bg-slate-50 text-slate-400 hover:text-slate-700'}`}
+                  >
                     {m.label}
                   </button>
                 ))}
@@ -262,43 +659,39 @@ export default function PagosPage() {
 
             {/* RESUMEN ACTUALIZADO */}
             {clienteSel && (
-              <div className={`p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] border animate-in slide-in-from-bottom-2 duration-500 ${clienteSel.es_grupo ? 'bg-purple-50 border-purple-100' : 'bg-emerald-50 border-emerald-100'}`}>
+              <div className={`p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] border animate-in slide-in-from-bottom-2 duration-500 ${clienteSel.es_grupo ? 'bg-slate-100/80 border-slate-200' : 'bg-emerald-50/60 border-emerald-200/80'}`}>
                 <div className="space-y-3">
                   <div className="flex justify-between text-slate-500 font-bold text-xs">
                     <span>SALDO TOTAL (CON MORA):</span>
-                    <span className="text-slate-700 font-black">${saldoTotalAnterior.toLocaleString('es-MX')}</span>
+                    <span className="text-slate-800 font-black">${saldoTotalAnterior.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
                   </div>
 
                   <div className="space-y-1 px-1">
-                    <div className="flex justify-between text-[10px] text-blue-600 font-black uppercase italic mb-1">
-                      <span>Abono a capital:</span>
-                      <span>
-                        {clienteSel.prestamos_activos?.[0]
-                          ? `$${(Number(clienteSel.prestamos_activos[0].monto_total) / Number(clienteSel.prestamos_activos[0].cuotas)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
-                          : '---'}
-                      </span>
-                    </div>
                     <div className="flex justify-between text-slate-400 text-[10px] italic font-medium">
-                      <span>Capital actual: ${Number(clienteSel.saldo_actual).toLocaleString()}</span>
-                      <span>+ Mora detectada: ${Number(montoPenalizacion).toLocaleString()}</span>
+                      <span>Capital actual: ${Number(clienteSel.saldo_actual || 0).toLocaleString('es-MX')}</span>
+                      <span>+ Mora detectada: ${Number(montoPenalizacion || 0).toLocaleString('es-MX')}</span>
                     </div>
-                    <div className="flex justify-between text-rose-500 text-[10px] font-black uppercase tracking-tighter pt-1">
-                      <span>Abono a aplicar:</span>
-                      <span>- ${(Number(montoAbono) + Number(montoPenalizacion)).toLocaleString('es-MX')}</span>
+                    <div className="flex justify-between text-rose-600 text-[10px] font-black uppercase tracking-tighter pt-1">
+                      <span>Abono a aplicar (Total):</span>
+                      <span>- ${(Number(montoAbono || 0) + Number(montoPenalizacion || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
 
-                  <div className={`flex justify-between pt-4 border-t ${clienteSel.es_grupo ? 'border-purple-200' : 'border-emerald-200'}`}>
-                    <span className="text-xs font-black uppercase">NUEVO SALDO CAPITAL:</span>
-                    <span className={`text-xl md:text-2xl font-black tracking-tighter ${clienteSel.es_grupo ? 'text-purple-900' : 'text-emerald-900'}`}>
-                      ${nuevoSaldoCalculado.toLocaleString('es-MX')}
+                  <div className={`flex justify-between pt-4 border-t ${clienteSel.es_grupo ? 'border-slate-200' : 'border-emerald-200'}`}>
+                    <span className="text-xs font-black uppercase text-slate-800">NUEVO SALDO CAPITAL:</span>
+                    <span className={`text-xl md:text-2xl font-black tracking-tighter ${clienteSel.es_grupo ? 'text-slate-900' : 'text-emerald-800'}`}>
+                      ${nuevoSaldoCalculado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
               </div>
             )}
 
-            <button type="submit" disabled={loading || !clienteSel || !montoAbono} className={`w-full py-5 md:py-6 text-white font-black rounded-2xl md:rounded-[2rem] shadow-xl transition-all uppercase text-[10px] md:text-xs tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 disabled:opacity-30 ${clienteSel?.es_grupo ? 'bg-purple-600 hover:bg-purple-700' : 'bg-[#050533] hover:bg-[#0047AB]'}`}>
+            <button
+              type="submit"
+              disabled={loading || !clienteSel || !montoAbono}
+              className={`w-full py-5 md:py-6 text-white font-black rounded-2xl md:rounded-[2rem] shadow-xl transition-all uppercase text-[10px] md:text-xs tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 disabled:opacity-30 ${clienteSel?.es_grupo ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/10' : 'bg-emerald-700 hover:bg-emerald-800 shadow-emerald-900/10'}`}
+            >
               {loading ? <Loader2 className="animate-spin" /> : <>Confirmar y Emitir Recibo <CheckCircle2 size={18} /></>}
             </button>
           </form>
@@ -306,12 +699,12 @@ export default function PagosPage() {
       </div>
 
       {alerta && (
-        <div className={`fixed top-10 right-10 z-[130] p-6 rounded-[2rem] shadow-2xl flex items-center gap-4 border-b-4 bg-white animate-in slide-in-from-right duration-500 ${alerta.type === 'success' ? 'border-emerald-500' : 'border-red-500'}`}>
-          <div className={`p-3 rounded-2xl ${alerta.type === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
+        <div className={`fixed top-10 right-10 z-[130] p-6 rounded-[2rem] shadow-2xl flex items-center gap-4 border-b-4 bg-white animate-in slide-in-from-right duration-500 ${alerta.type === 'success' ? 'border-emerald-500' : 'border-rose-500'}`}>
+          <div className={`p-3 rounded-2xl ${alerta.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
             {alerta.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">{alerta.type === 'success' ? 'Sistema Express' : 'Atención'}</p>
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">{alerta.type === 'success' ? 'Sistema SIFIN' : 'Atención'}</p>
             <p className="font-bold text-sm italic text-slate-700">{alerta.msg}</p>
           </div>
           <button onClick={() => setAlerta(null)} className="ml-4 text-slate-300 hover:text-slate-500">

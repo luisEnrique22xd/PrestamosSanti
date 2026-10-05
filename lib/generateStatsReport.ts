@@ -325,7 +325,7 @@ import { saveAs } from 'file-saver';
 
 export const exportToExcel = async (stats: any, grafica: any[] = []) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Reporte Detallado SAPPE');
+  const worksheet = workbook.addWorksheet('Reporte Detallado SIFIN');
 
   // Ajuste de columnas para incluir el Total Programado Ajustado (con Penalizaciones)
   worksheet.columns = [
@@ -512,5 +512,5 @@ export const exportToExcel = async (stats: any, grafica: any[] = []) => {
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  saveAs(blob, `Reporte_SAPPE_${new Date().getTime()}.xlsx`);
+  saveAs(blob, `Reporte_SIFIN_${new Date().getTime()}.xlsx`);
 };

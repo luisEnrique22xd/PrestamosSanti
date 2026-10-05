@@ -5,7 +5,7 @@ import "../globals.css";
 
 
 export const metadata = {
-  title: 'SAPPE',
+  title: 'SIFIN',
   manifest: '/manifest.json',
   themeColor: '#0047AB',
   icons: {

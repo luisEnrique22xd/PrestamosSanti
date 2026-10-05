@@ -1,7 +1,7 @@
 {
-  "name": "SAPPE",
-  "short_name": "SAPPE",
-  "description": "Sistema de Administración de Préstamos Express",
+  "name": "SIFIN",
+  "short_name": "SIFIN",
+  "description": "Sistema Integral Financiero Santi",
   "start_url": "/dashboard",
   "display": "standalone",
   "scope": "/",
